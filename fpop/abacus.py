@@ -10,7 +10,7 @@ from typing import (
     Set,
     Dict,
     Optional,
-    Union,
+    Union
 )
 import numpy as np
 from dflow.python import (
@@ -348,6 +348,12 @@ class AbacusInputs():
         self._deepks_descriptor = None if deepks_descriptor == None else (os.path.split(deepks_descriptor)[1], Path(deepks_descriptor).read_text())
         self._deepks_model = None if deepks_model == None else (os.path.split(deepks_model)[1], Path(deepks_model).read_bytes())
 
+    def spin_constrain(self):
+        sc = self._input.get("sc_mag_switch","")
+        if sc.lower() in ["","f","false", "0", ".false."]:
+            return False
+        return True
+    
     def _read_dict_file(self,input_dict,out_dict=None):
         # input_dict is a dict whose value is a file.
         # The filename and context will make up a tuple, which is 
@@ -542,7 +548,17 @@ class PrepAbacus(PrepFp):
         pp, orb = abacus_inputs.write_pporb(element_list)
         dpks = abacus_inputs.write_deepks()
         mass = abacus_inputs.get_mass(element_list)
-        conf_frame.to('abacus/stru', 'STRU', pp_file=pp,numerical_orbital=orb,numerical_descriptor=dpks,mass=mass)
+        
+        # if spin constrain, need to write the mag and sc to STRU
+        mag = None
+        sc = None
+        if abacus_inputs.spin_constrain():
+            mag = conf_frame.data.get("spin",None)
+            if mag is not None:
+                mag = mag[0]
+                sc = [[1,1,1]] * len(mag)  # constrain all atoms in x,y,z direction
+        
+        conf_frame.to('abacus/stru', 'STRU', pp_file=pp,numerical_orbital=orb,numerical_descriptor=dpks,mass=mass,mag=mag,sc=sc)
         
         abacus_inputs.write_input("INPUT")
         abacus_inputs.write_kpt("KPT")
