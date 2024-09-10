@@ -553,7 +553,7 @@ class PrepAbacus(PrepFp):
         mag = None
         sc = None
         if abacus_inputs.spin_constrain():
-            mag = conf_frame.data.get("spin",None)
+            mag = conf_frame.data.get("spins",None)
             if mag is not None:
                 mag = mag[0]
                 sc = [[1,1,1]] * len(mag)  # constrain all atoms in x,y,z direction

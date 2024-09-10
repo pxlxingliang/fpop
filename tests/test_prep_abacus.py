@@ -29,7 +29,7 @@ from dflow.python import (
 import time, shutil, dpdata
 from pathlib import Path
 
-from context import (
+from .context import (
         fpop,
         default_image,
         upload_python_packages,
@@ -38,9 +38,10 @@ from context import (
         )
 from fpop.abacus import PrepAbacus,AbacusInputs
 from typing import List
-from constants import POSCAR_1_content,POSCAR_2_content,dump_conf_from_poscar
+from .constants import POSCAR_1_content,POSCAR_2_content,dump_conf_from_poscar
 upload_packages.append("../fpop")
 upload_packages.append("./context.py")
+
 
 class TestPrepAbacus(unittest.TestCase):
     '''
@@ -200,4 +201,59 @@ class TestPrepAbacusConf(TestPrepAbacus,unittest.TestCase):
 
         self.assertEqual(tdirs, step.outputs.parameters['task_names'].value)
 
+class TestPrepAbacusSpin(unittest.TestCase):
+    '''
+    deepmd/npy format named ["data.000","data.001"].
+    no optional_input or optional_artifact.
+    '''
+    def setUp(self):
+        self.source_path = Path('abacustest')
+        self.word_path = Path('task.000')
+        self.source_path.mkdir(parents=True, exist_ok=True)
+        self.word_path.mkdir(parents=True, exist_ok=True)
+        
+        poscar_path = self.source_path / "POSCAR_tmp"
+        poscar_path.write_text(POSCAR_1_content)
+        self.confs = dpdata.System(poscar_path, fmt="vasp/poscar")
+        self.confs.data["spins"] = [[[1,2,3]]]
+        
+        (self.source_path/"INPUT").write_text('INPUT_PARAMETERS\ncalculation scf\nbasis_type lcao\nsc_mag_switch 1\n')
+        (self.source_path/"KPT").write_text('here kpt')
+        (self.source_path/"Na.upf").write_text('here upf')
+        (self.source_path/"Na.orb").write_text('here orb')
+        (self.source_path/'optional_test').write_text('here test')
+
+        self.abacus_inputs = AbacusInputs(
+            input_file=self.source_path/"INPUT",
+            kpt_file=self.source_path/"KPT",
+            pp_files={"Na":self.source_path/"Na.upf"},
+            orb_files={"Na":self.source_path/"Na.orb"}
+        )
+    
+    def tearDown(self):
+        if os.path.isdir(self.source_path):
+            shutil.rmtree(self.source_path)
+        if os.path.isdir(self.word_path):
+            shutil.rmtree(self.word_path)
+
+    def test_prepare_abacus_spin(self):
+        pabacus = PrepAbacus()
+        os.chdir(self.word_path)
+        
+        pabacus.prep_task(self.confs, self.abacus_inputs)
+
+        self.assertTrue(os.path.isfile('INPUT'))
+        self.assertTrue(os.path.isfile('KPT'))
+        self.assertTrue(os.path.isfile('STRU'))
+        self.assertTrue(os.path.isfile('Na.upf'))
+        self.assertTrue(os.path.isfile('Na.orb'))
+        self.assertEqual(Path('INPUT').read_text().split()[0],"INPUT_PARAMETERS")      
+        self.assertEqual(Path('KPT').read_text(),'here kpt')
+        self.assertEqual(Path('Na.upf').read_text(),'here upf')
+        self.assertEqual(Path('Na.orb').read_text(),'here orb')
+            
+        with open("STRU") as f : c = f.read()
+        self.assertTrue("0.000000000000 0.000000000000 0.000000000000 1 1 1 mag 1.000000000000 2.000000000000 3.000000000000 sc 1 1 1" in c)
+        
+        os.chdir("../")
 
