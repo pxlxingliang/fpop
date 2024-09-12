@@ -29,7 +29,7 @@ from dflow.python import (
 import time, shutil, dpdata
 from pathlib import Path
 
-from .context import (
+from context import (
         fpop,
         default_image,
         upload_python_packages,
@@ -38,7 +38,7 @@ from .context import (
         )
 from fpop.abacus import PrepAbacus,AbacusInputs
 from typing import List
-from .constants import POSCAR_1_content,POSCAR_2_content,dump_conf_from_poscar
+from constants import POSCAR_1_content,POSCAR_2_content,dump_conf_from_poscar
 upload_packages.append("../fpop")
 upload_packages.append("./context.py")
 
