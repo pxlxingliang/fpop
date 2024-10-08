@@ -314,7 +314,8 @@ class AbacusInputs():
             kpt_file: Optional[Union[str,Path]] = None,
             orb_files: Optional[Dict[str, Union[str,Path]]] = None,
             deepks_descriptor: Optional[Union[str,Path]] = None,
-            deepks_model: Optional[Union[str,Path]] = None
+            deepks_model: Optional[Union[str,Path]] = None,
+            constrain_elements: Optional[List[str]] = None,
     ):     
         """The input information of an ABACUS job except for STRU.
 
@@ -337,6 +338,9 @@ class AbacusInputs():
             The deepks descriptor file, by default None.
         deepks_model : str, optional
             The deepks model file, by default None.
+        constrain_elements : List[str], optional
+            The elements that need to constrain the magnetic moment, by default None. 
+            For the constrained elements, the flag "sc 1 1 1" will be added in STRU.
         """        
         self.input_file = input_file
         self._input = AbacusInputs.read_inputf(self.input_file)
@@ -347,12 +351,7 @@ class AbacusInputs():
         self._orb_files = {} if orb_files == None else self._read_dict_file(orb_files)
         self._deepks_descriptor = None if deepks_descriptor == None else (os.path.split(deepks_descriptor)[1], Path(deepks_descriptor).read_text())
         self._deepks_model = None if deepks_model == None else (os.path.split(deepks_model)[1], Path(deepks_model).read_bytes())
-
-    def spin_constrain(self):
-        sc = self._input.get("sc_mag_switch","")
-        if sc.lower() in ["","f","false", "0", ".false."]:
-            return False
-        return True
+        self._constrin_elements = constrain_elements
     
     def _read_dict_file(self,input_dict,out_dict=None):
         # input_dict is a dict whose value is a file.
@@ -400,6 +399,9 @@ class AbacusInputs():
     
     def get_deepks_model(self):
         return self._deepks_model
+    
+    def get_constrain_elements(self):
+        return self._constrin_elements
 
     @staticmethod
     def read_inputf(inputf: Union[str,Path]) -> dict:
@@ -549,14 +551,18 @@ class PrepAbacus(PrepFp):
         dpks = abacus_inputs.write_deepks()
         mass = abacus_inputs.get_mass(element_list)
         
-        # if spin constrain, need to write the mag and sc to STRU
-        mag = None
+        # if conf_frame has the spins, then we will use it as the initial mag and write it to STRU
+        mag = conf_frame.data.get("spins",None)
+        if mag is not None:
+            mag = mag[0] # spins is the mag of several frames, here we only use the first frame
+        
+        # if the constrain_elements is set, we will set the related flag in STRU    
         sc = None
-        if abacus_inputs.spin_constrain():
-            mag = conf_frame.data.get("spins",None)
-            if mag is not None:
-                mag = mag[0]
-                sc = [[1,1,1]] * len(mag)  # constrain all atoms in x,y,z direction
+        c_eles = abacus_inputs.get_constrain_elements()
+        if c_eles:
+            atom_names = conf_frame.data["atom_names"]
+            atom_types = [atom_names[i] for i in conf_frame.data["atom_types"]]
+            sc = [None if i not in c_eles else [1,1,1] for i in atom_types]
         
         conf_frame.to('abacus/stru', 'STRU', pp_file=pp,numerical_orbital=orb,numerical_descriptor=dpks,mass=mass,mag=mag,sc=sc)
         

@@ -38,7 +38,7 @@ from context import (
         )
 from fpop.abacus import PrepAbacus,AbacusInputs
 from typing import List
-from constants import POSCAR_1_content,POSCAR_2_content,dump_conf_from_poscar
+from constants import POSCAR_1_content,POSCAR_2_content,STRU1_content,dump_conf_from_poscar
 upload_packages.append("../fpop")
 upload_packages.append("./context.py")
 
@@ -212,22 +212,26 @@ class TestPrepAbacusSpin(unittest.TestCase):
         self.source_path.mkdir(parents=True, exist_ok=True)
         self.word_path.mkdir(parents=True, exist_ok=True)
         
-        poscar_path = self.source_path / "POSCAR_tmp"
-        poscar_path.write_text(POSCAR_1_content)
-        self.confs = dpdata.System(poscar_path, fmt="vasp/poscar")
-        self.confs.data["spins"] = [[[1,2,3]]]
+        stru_path = self.source_path / "STRU_tmp"
+        stru_path.write_text(STRU1_content)
+        self.confs = dpdata.System(str(stru_path), fmt="abacus/stru")
+        self.confs.data["spins"] = [[[1,2,3],[4,5,6],[7,8,9],[1,1,1],
+                                     [2,2,2],[3,3,3],[4,4,4],[5,5,5]]]
         
-        (self.source_path/"INPUT").write_text('INPUT_PARAMETERS\ncalculation scf\nbasis_type lcao\nsc_mag_switch 1\n')
+        (self.source_path/"INPUT").write_text('INPUT_PARAMETERS\ncalculation scf\nbasis_type lcao\n')
         (self.source_path/"KPT").write_text('here kpt')
-        (self.source_path/"Na.upf").write_text('here upf')
-        (self.source_path/"Na.orb").write_text('here orb')
+        (self.source_path/"As.upf").write_text('here As upf')
+        (self.source_path/"Ga.upf").write_text('here Ga upf')
+        (self.source_path/"As.orb").write_text('here As orb')
+        (self.source_path/"Ga.orb").write_text('here Ga orb')
         (self.source_path/'optional_test').write_text('here test')
 
         self.abacus_inputs = AbacusInputs(
             input_file=self.source_path/"INPUT",
             kpt_file=self.source_path/"KPT",
-            pp_files={"Na":self.source_path/"Na.upf"},
-            orb_files={"Na":self.source_path/"Na.orb"}
+            pp_files={"As":self.source_path/"As.upf","Ga":self.source_path/"Ga.upf"},
+            orb_files={"As":self.source_path/"As.orb","Ga":self.source_path/"Ga.orb"},
+            constrain_elements=["As"] # only constrain As
         )
     
     def tearDown(self):
@@ -245,15 +249,33 @@ class TestPrepAbacusSpin(unittest.TestCase):
         self.assertTrue(os.path.isfile('INPUT'))
         self.assertTrue(os.path.isfile('KPT'))
         self.assertTrue(os.path.isfile('STRU'))
-        self.assertTrue(os.path.isfile('Na.upf'))
-        self.assertTrue(os.path.isfile('Na.orb'))
+        self.assertTrue(os.path.isfile('As.upf'))
+        self.assertTrue(os.path.isfile('Ga.upf'))
+        self.assertTrue(os.path.isfile('As.orb'))
+        self.assertTrue(os.path.isfile('Ga.orb'))
         self.assertEqual(Path('INPUT').read_text().split()[0],"INPUT_PARAMETERS")      
         self.assertEqual(Path('KPT').read_text(),'here kpt')
-        self.assertEqual(Path('Na.upf').read_text(),'here upf')
-        self.assertEqual(Path('Na.orb').read_text(),'here orb')
+        self.assertEqual(Path('As.upf').read_text(),'here As upf')
+        self.assertEqual(Path('Ga.upf').read_text(),'here Ga upf')
+        self.assertEqual(Path('As.orb').read_text(),'here As orb')
+        self.assertEqual(Path('Ga.orb').read_text(),'here Ga orb')
             
         with open("STRU") as f : c = f.read()
-        self.assertTrue("0.000000000000 0.000000000000 0.000000000000 1 1 1 mag 1.000000000000 2.000000000000 3.000000000000 sc 1 1 1" in c)
-        
+        #print(c)
+        ref_c = '''Ga
+0.0
+4
+0.000000000000 0.000000000000 0.000000000000 1 1 1 mag 1.000000000000 2.000000000000 3.000000000000
+0.000000000000 2.875074596069 2.875074596069 1 1 1 mag 4.000000000000 5.000000000000 6.000000000000
+2.875074596069 0.000000000000 2.875074596069 1 1 1 mag 7.000000000000 8.000000000000 9.000000000000
+2.875074596069 2.875074596069 0.000000000000 1 1 1 mag 1.000000000000 1.000000000000 1.000000000000
+As
+0.0
+4
+1.437537298035 1.437537298035 1.437537298035 1 1 1 mag 2.000000000000 2.000000000000 2.000000000000 sc 1 1 1
+1.437537298035 4.312611894104 4.312611894104 1 1 1 mag 3.000000000000 3.000000000000 3.000000000000 sc 1 1 1
+4.312611894104 1.437537298035 4.312611894104 1 1 1 mag 4.000000000000 4.000000000000 4.000000000000 sc 1 1 1
+4.312611894104 4.312611894104 1.437537298035 1 1 1 mag 5.000000000000 5.000000000000 5.000000000000 sc 1 1 1'''
+        self.assertTrue(ref_c in c)
         os.chdir("../")
 
