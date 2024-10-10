@@ -525,7 +525,7 @@ class PrepAbacus(PrepFp):
     def prep_task(
             self,
             conf_frame,
-            abacus_inputs: AbacusInputs,
+            inputs: AbacusInputs,
             prepare_image_config: Optional[Dict] = None,
             optional_input: Optional[Dict] = None,
             optional_artifact: Optional[Dict] = None,
@@ -547,9 +547,9 @@ class PrepAbacus(PrepFp):
         """
 
         element_list = conf_frame['atom_names']
-        pp, orb = abacus_inputs.write_pporb(element_list)
-        dpks = abacus_inputs.write_deepks()
-        mass = abacus_inputs.get_mass(element_list)
+        pp, orb = inputs.write_pporb(element_list)
+        dpks = inputs.write_deepks()
+        mass = inputs.get_mass(element_list)
         
         # if conf_frame has the spins, then we will use it as the initial mag and write it to STRU
         mag = conf_frame.data.get("spins",None)
@@ -558,7 +558,7 @@ class PrepAbacus(PrepFp):
         
         # if the constrain_elements is set, we will set the related flag in STRU    
         sc = None
-        c_eles = abacus_inputs.get_constrain_elements()
+        c_eles = inputs.get_constrain_elements()
         if c_eles:
             atom_names = conf_frame.data["atom_names"]
             atom_types = [atom_names[i] for i in conf_frame.data["atom_types"]]
@@ -566,8 +566,8 @@ class PrepAbacus(PrepFp):
         
         conf_frame.to('abacus/stru', 'STRU', pp_file=pp,numerical_orbital=orb,numerical_descriptor=dpks,mass=mass,mag=mag,sc=sc)
         
-        abacus_inputs.write_input("INPUT")
-        abacus_inputs.write_kpt("KPT")
+        inputs.write_input("INPUT")
+        inputs.write_kpt("KPT")
 
         if optional_artifact:
             for file_name, file_path in optional_artifact.items():
