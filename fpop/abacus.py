@@ -454,20 +454,14 @@ class AbacusInputs():
         List[List]
             a list of the list of pp files, and orbital files 
         """  
-        need_orb = False
-        if self._input.get("basis_type","pw").lower() in ["lcao","lcao_in_pw"]:
-            need_orb = True
         pp,orb = [],[]
         for ielement in element_list:
             if ielement in self._pp_files:
                 Path(self._pp_files[ielement][0]).write_text(self._pp_files[ielement][1])
                 pp.append(self._pp_files[ielement][0])
-            if need_orb and ielement in self._orb_files:
+            if ielement in self._orb_files:
                 Path(self._orb_files[ielement][0]).write_text(self._orb_files[ielement][1]) 
                 orb.append(self._orb_files[ielement][0])
-
-        if not orb: 
-            orb = None
 
         return [pp,orb]     
 
