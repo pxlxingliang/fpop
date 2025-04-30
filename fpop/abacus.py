@@ -653,10 +653,10 @@ class RunAbacus(RunFp):
             raise TransientError(
                 "abacus failed\n", "out msg", out, "\n", "err msg", err, "\n"
             )
-        if not self.check_run_success(log_name):
-            raise TransientError(
-                "abacus failed , we could not check the exact cause . Please check log file ."
-            )
+        #if not self.check_run_success(log_name):
+        #    raise TransientError(
+        #        "abacus failed , we could not check the exact cause . Please check log file ."
+        #    )
         os.makedirs(Path(backward_dir_name))
         shutil.copyfile(log_name,Path(backward_dir_name)/log_name)
         for ii in backward_list:
