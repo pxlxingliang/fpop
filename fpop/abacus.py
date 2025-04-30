@@ -648,7 +648,7 @@ class RunAbacus(RunFp):
             command = "abacus"
         # run abacus
         command = " ".join([command, ">", log_name])
-        ret, out, err = run_command(command, raise_error=False, try_bash=True,)
+        ret, out, err = run_command(command, raise_error=False, shell=True,)
         if ret != 0:
             raise TransientError(
                 "abacus failed\n", "out msg", out, "\n", "err msg", err, "\n"
