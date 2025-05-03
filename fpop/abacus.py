@@ -657,6 +657,8 @@ class RunAbacus(RunFp):
         #    raise TransientError(
         #        "abacus failed , we could not check the exact cause . Please check log file ."
         #    )
+        if os.path.isdir(backward_dir_name):
+            shutil.rmtree(backward_dir_name)
         os.makedirs(Path(backward_dir_name))
         shutil.copyfile(log_name,Path(backward_dir_name)/log_name)
         for ii in backward_list:
